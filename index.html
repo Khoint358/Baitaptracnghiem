@@ -34,12 +34,31 @@
       --r-lg: 20px;
       --r-md: 14px;
       --r-sm: 8px;
+      --overlay-bg: linear-gradient(rgba(9, 10, 15, 0.45), rgba(9, 10, 15, 0.65));
+      --opt-bg: rgba(255,255,255,0.03);
+      --opt-border: rgba(255,255,255,0.08);
+    }
+
+    /* ===== LIGHT MODE (CHẾ ĐỘ SÁNG) ===== */
+    body.theme-light {
+      --bg-deep: #f0f4f9;
+      --bg-card: rgba(255, 255, 255, 0.88);
+      --bg-card-hover: rgba(255, 255, 255, 0.96);
+      --border: rgba(139, 92, 246, 0.2);
+      --text-1: #1e1b4b;
+      --text-2: #475569;
+      --text-3: #64748b;
+      --purple: #7c3aed;
+      --purple-light: #6d28d9;
+      --overlay-bg: linear-gradient(rgba(240, 244, 249, 0.7), rgba(240, 244, 249, 0.85));
+      --opt-bg: rgba(255, 255, 255, 0.7);
+      --opt-border: rgba(139, 92, 246, 0.15);
     }
 
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background-color: var(--bg-deep);
-      background-image: linear-gradient(rgba(9, 10, 15, 0.45), rgba(9, 10, 15, 0.65)), 
+      background-image: var(--overlay-bg), 
                         url('solar_system_bg.png');
       background-size: cover;
       background-position: center;
@@ -48,6 +67,7 @@
       color: var(--text-1);
       min-height: 100vh;
       overflow-x: hidden;
+      transition: background-color 0.4s ease, color 0.4s ease;
     }
 
     /* ============================================
@@ -86,8 +106,36 @@
       min-height: 100vh;
     }
 
-    /* ===== HEADER ===== */
-    .header { text-align: center; animation: fadeDown .65s ease-out; }
+    /* ===== HEADER & THEME TOGGLE ===== */
+    .theme-toggle-wrap {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      z-index: 10;
+    }
+    .theme-toggle-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-1);
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .theme-toggle-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--purple-light);
+    }
+
+    .header { text-align: center; animation: fadeDown .65s ease-out; position: relative; width: 100%; }
     .header h1 {
       font-size: clamp(1.7rem, 5vw, 2.6rem);
       font-weight: 900; letter-spacing: -0.5px;
@@ -364,6 +412,12 @@
 
     <!-- Header -->
     <header class="header">
+      <div class="theme-toggle-wrap">
+        <button id="themeToggleBtn" class="theme-toggle-btn" title="Chuyển chế độ Sáng / Tối">
+          <span id="themeIcon">🌙</span>
+          <span id="themeText">Giao diện Tối</span>
+        </button>
+      </div>
       <h1>🌌 Trắc Nghiệm Vũ Trụ</h1>
       <p>Khám phá kiến thức thiên văn qua 10 câu hỏi thú vị!</p>
     </header>
@@ -849,6 +903,39 @@
       var d = document.createElement('div');
       d.textContent = s;
       return d.innerHTML;
+    }
+
+    // ═══════════════════════════════════════════════
+    // XỬ LÝ THEME SÁNG / TỐI (LIGHT / DARK MODE)
+    // ═══════════════════════════════════════════════
+    var themeToggleBtn = document.getElementById('themeToggleBtn');
+    var themeIcon = document.getElementById('themeIcon');
+    var themeText = document.getElementById('themeText');
+
+    function applyTheme(isLight) {
+      if (isLight) {
+        document.body.classList.add('theme-light');
+        themeIcon.textContent = '☀️';
+        themeText.textContent = 'Giao diện Sáng';
+      } else {
+        document.body.classList.remove('theme-light');
+        themeIcon.textContent = '🌙';
+        themeText.textContent = 'Giao diện Tối';
+      }
+    }
+
+    // Kiểm tra cài đặt đã lưu
+    var savedTheme = localStorage.getItem('quiz_theme');
+    var isLight = savedTheme === 'light';
+    applyTheme(isLight);
+
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener('click', function() {
+        var currentIsLight = document.body.classList.contains('theme-light');
+        var newIsLight = !currentIsLight;
+        applyTheme(newIsLight);
+        localStorage.setItem('quiz_theme', newIsLight ? 'light' : 'dark');
+      });
     }
 
     // ═══════════════════════════════════════════════
