@@ -1,1182 +1,862 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description"
-    content="Vòng quay may mắn - Ứng dụng giải trí tương tác với vòng quay ngẫu nhiên công bằng.">
-  <title>🎯 Vòng Quay May Mắn</title>
+  <meta name="description" content="Trắc nghiệm Vũ trụ — Ứng dụng kiểm tra kiến thức thiên văn dành cho học sinh cấp 2.">
+  <title>🌌 Trắc Nghiệm Vũ Trụ</title>
   <style>
-    /* ===== RESET & BASE ===== */
-    *,
-    *::before,
-    *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    /* ============================================
+       RESET & BIẾN TOÀN CỤC
+       ============================================ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg-primary: #b91c1c;
-      --bg-secondary: rgba(255, 255, 255, 0.04);
-      --bg-glass: rgba(255, 255, 255, 0.06);
-      --border-glass: rgba(255, 255, 255, 0.1);
-      --text-primary: #f0f0f5;
-      --text-secondary: #9d9db5;
-      --accent-1: #6c5ce7;
-      --accent-2: #a29bfe;
-      --accent-glow: rgba(108, 92, 231, 0.4);
-      --success: #00cec9;
-      --danger: #ff6b6b;
-      --gold: #ffd700;
-      --radius-lg: 20px;
-      --radius-md: 12px;
-      --radius-sm: 8px;
+      --bg-deep: #06061a;
+      --bg-card: rgba(255,255,255,0.04);
+      --bg-card-hover: rgba(255,255,255,0.07);
+      --border: rgba(255,255,255,0.08);
+      --text-1: #eef0f8;
+      --text-2: #8b8db0;
+      --text-3: #5a5c7a;
+      --purple: #8b5cf6;
+      --purple-light: #a78bfa;
+      --purple-glow: rgba(139,92,246,0.35);
+      --blue: #3b82f6;
+      --cyan: #06b6d4;
+      --green: #10b981;
+      --green-bg: rgba(16,185,129,0.12);
+      --green-border: rgba(16,185,129,0.35);
+      --red: #ef4444;
+      --red-bg: rgba(239,68,68,0.10);
+      --red-border: rgba(239,68,68,0.30);
+      --gold: #fbbf24;
+      --r-lg: 20px;
+      --r-md: 14px;
+      --r-sm: 8px;
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-deep);
+      background-image: linear-gradient(rgba(9, 10, 15, 0.45), rgba(9, 10, 15, 0.65)), 
+                        url('solar_system_bg.png');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      color: var(--text-1);
       min-height: 100vh;
       overflow-x: hidden;
-      position: relative;
     }
 
-    /* ===== ANIMATED BACKGROUND ===== */
+    /* ============================================
+       NỀN SAO & TINH VÂN
+       ============================================ */
+    body::before, body::after {
+      content: ''; position: fixed; pointer-events: none;
+    }
+    /* Các vệt tinh vân */
     body::before {
-      content: '';
-      position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
+      inset: 0;
       background:
-        radial-gradient(circle at 20% 50%, rgba(108, 92, 231, 0.12) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(0, 206, 201, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 50% 80%, rgba(255, 107, 107, 0.06) 0%, transparent 50%);
-      animation: bgShift 20s ease-in-out infinite alternate;
+        radial-gradient(ellipse 55% 45% at 15% 50%, rgba(139,92,246,0.10) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 50% at 85% 30%, rgba(6,182,212,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 50% 90%, rgba(59,130,246,0.06) 0%, transparent 70%);
       z-index: 0;
-      pointer-events: none;
+      animation: nebulaPulse 18s ease-in-out infinite alternate;
+    }
+    @keyframes nebulaPulse { 0%{opacity:1;} 100%{opacity:.55;} }
+
+    /* Canvas ngôi sao được vẽ bằng JS, đặt cố định */
+    #starfield {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
     }
 
-    @keyframes bgShift {
-      0% {
-        transform: translate(0, 0) rotate(0deg);
-      }
-
-      100% {
-        transform: translate(-3%, -3%) rotate(8deg);
-      }
-    }
-
-    /* ===== LAYOUT ===== */
-    .app-container {
-      position: relative;
-      z-index: 1;
-      max-width: 1200px;
+    /* ============================================
+       BỐ CỤC ỨNG DỤNG
+       ============================================ */
+    .app {
+      position: relative; z-index: 1;
+      max-width: 720px;
       margin: 0 auto;
-      padding: 30px 20px 50px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 36px;
+      padding: 36px 20px 60px;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 32px;
+      min-height: 100vh;
     }
 
     /* ===== HEADER ===== */
-    .app-header {
-      text-align: center;
-      animation: fadeInDown 0.8s ease-out;
-    }
-
-    .app-header h1 {
-      font-size: 2.6rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, #a29bfe, #6c5ce7, #00cec9);
+    .header { text-align: center; animation: fadeDown .65s ease-out; }
+    .header h1 {
+      font-size: clamp(1.7rem, 5vw, 2.6rem);
+      font-weight: 900; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--purple-light), var(--cyan), var(--blue));
       background-size: 200% 200%;
-      -webkit-background-clip: text;
+      -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: gradientText 4s ease infinite;
-      letter-spacing: -1px;
+      animation: gradShift 5s ease infinite;
+    }
+    .header p { color: var(--text-2); font-size: .93rem; margin-top: 5px; }
+
+    @keyframes gradShift { 0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;} }
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-18px);}to{opacity:1;transform:translateY(0);} }
+    @keyframes fadeUp   { from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);} }
+
+    /* ===== THANH TIẾN TRÌNH ===== */
+    .progress-bar-wrap {
+      width: 100%; max-width: 560px;
+      animation: fadeUp .6s ease-out .1s both;
+    }
+    .progress-info {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; font-size: .82rem; font-weight: 600;
+    }
+    .progress-info .step { color: var(--purple-light); }
+    .progress-info .score-live { color: var(--cyan); }
+    .progress-track {
+      width: 100%; height: 7px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--purple), var(--cyan));
+      border-radius: 10px;
+      transition: width .5s cubic-bezier(.4,0,.2,1);
     }
 
-    .app-header p {
-      color: var(--text-secondary);
-      font-size: 1rem;
-      margin-top: 6px;
-      font-weight: 400;
+    /* ===== THẺ CÂU HỎI ===== */
+    .card {
+      width: 100%; max-width: 560px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 32px 28px;
+      animation: fadeUp .55s ease-out .18s both;
     }
 
-    @keyframes gradientText {
-
-      0%,
-      100% {
-        background-position: 0% 50%;
-      }
-
-      50% {
-        background-position: 100% 50%;
-      }
+    .q-number {
+      font-size: .78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2.5px;
+      color: var(--purple-light);
+      margin-bottom: 10px;
+    }
+    .q-text {
+      font-size: 1.12rem; font-weight: 600; line-height: 1.6;
+      margin-bottom: 24px;
     }
 
-    @keyframes fadeInDown {
-      from {
-        opacity: 0;
-        transform: translateY(-24px);
-      }
+    /* ===== CÁC LỰA CHỌN ===== */
+    .options { display: flex; flex-direction: column; gap: 10px; }
 
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* ===== MAIN CONTENT AREA ===== */
-    .main-content {
-      display: flex;
-      gap: 36px;
-      width: 100%;
-      align-items: flex-start;
-      justify-content: center;
-      flex-wrap: wrap;
-      animation: fadeInUp 0.8s ease-out 0.15s both;
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* ===== WHEEL SECTION ===== */
-    .wheel-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 28px;
-    }
-
-    .wheel-wrapper {
-      position: relative;
-      width: 420px;
-      height: 420px;
-      filter: drop-shadow(0 0 40px var(--accent-glow));
-    }
-
-    /* Outer glowing ring */
-    .wheel-wrapper::before {
-      content: '';
-      position: absolute;
-      inset: -8px;
-      border-radius: 50%;
-      background: conic-gradient(from 0deg,
-          #6c5ce7, #a29bfe, #00cec9, #ffd700, #ff6b6b, #fd79a8, #6c5ce7);
-      opacity: 0.5;
-      animation: ringRotate 8s linear infinite;
-      z-index: 0;
-    }
-
-    .wheel-wrapper::after {
-      content: '';
-      position: absolute;
-      inset: -4px;
-      border-radius: 50%;
-      background: var(--bg-primary);
-      z-index: 1;
-    }
-
-    @keyframes ringRotate {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    #wheelCanvas {
-      position: relative;
-      z-index: 2;
-      border-radius: 50%;
+    .opt-btn {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; padding: 14px 18px;
+      font-size: .95rem; font-weight: 500; font-family: inherit;
+      color: var(--text-1);
+      background: rgba(255,255,255,0.03);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: var(--r-md);
       cursor: pointer;
-      transition: filter 0.3s;
+      transition: all .25s ease;
+      text-align: left;
+    }
+    .opt-btn:hover:not(:disabled) {
+      background: var(--bg-card-hover);
+      border-color: rgba(255,255,255,0.16);
+      transform: translateX(4px);
     }
 
-    #wheelCanvas:hover {
-      filter: brightness(1.05);
-    }
-
-    /* ===== POINTER / KIM CHỈ ===== */
-    .pointer {
-      position: absolute;
-      top: -18px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      width: 0;
-      height: 0;
-      border-left: 18px solid transparent;
-      border-right: 18px solid transparent;
-      border-top: 40px solid var(--gold);
-      filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.5));
-      transition: transform 0.15s;
-    }
-
-    .pointer.bounce {
-      animation: pointerBounce 0.3s ease;
-    }
-
-    @keyframes pointerBounce {
-
-      0%,
-      100% {
-        transform: translateX(-50%) translateY(0);
-      }
-
-      50% {
-        transform: translateX(-50%) translateY(6px);
-      }
-    }
-
-    /* Center hub */
-    .center-hub {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 5;
-      width: 64px;
-      height: 64px;
+    /* Nhãn chữ cái A, B, C, D */
+    .opt-label {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; min-width: 32px;
       border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #fff 0%, #e0e0e0 60%, #aaa 100%);
-      box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.5),
-        inset 0 2px 6px rgba(255, 255, 255, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.6rem;
-      pointer-events: none;
+      background: rgba(255,255,255,0.06);
+      font-weight: 700; font-size: .85rem;
+      transition: all .25s;
     }
 
-    /* ===== SPIN BUTTON ===== */
-    .spin-btn {
-      position: relative;
-      padding: 16px 56px;
-      font-size: 1.15rem;
-      font-weight: 700;
-      font-family: inherit;
+    /* Trạng thái ĐÚNG */
+    .opt-btn.correct {
+      background: var(--green-bg);
+      border-color: var(--green-border);
+    }
+    .opt-btn.correct .opt-label {
+      background: var(--green); color: #fff;
+    }
+    /* Trạng thái SAI */
+    .opt-btn.wrong {
+      background: var(--red-bg);
+      border-color: var(--red-border);
+    }
+    .opt-btn.wrong .opt-label {
+      background: var(--red); color: #fff;
+    }
+    .opt-btn:disabled { cursor: default; }
+
+    /* Giải thích */
+    .explanation {
+      margin-top: 16px; padding: 14px 16px;
+      background: rgba(139,92,246,0.08);
+      border-left: 3px solid var(--purple);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      font-size: .87rem; line-height: 1.6;
+      color: var(--text-2);
+      animation: fadeUp .35s ease-out;
+    }
+    .explanation strong { color: var(--green); }
+
+    /* ===== HÀNG NÚT ĐIỀU HƯỚNG ===== */
+    .nav-row {
+      width: 100%; max-width: 560px;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px;
+      animation: fadeUp .55s ease-out .25s both;
+    }
+
+    .nav-btn {
+      padding: 12px 28px;
+      font-size: .9rem; font-weight: 600; font-family: inherit;
+      border: none; border-radius: 50px; cursor: pointer;
+      transition: all .25s; display: flex; align-items: center; gap: 6px;
+    }
+    .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+    .btn-prev {
+      color: var(--text-2);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .btn-prev:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+
+    .btn-next {
       color: #fff;
-      border: none;
-      border-radius: 60px;
-      cursor: pointer;
-      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-      box-shadow:
-        0 6px 30px var(--accent-glow),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-      transition: all 0.3s ease;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      overflow: hidden;
+      background: linear-gradient(135deg, var(--purple), var(--blue));
+      box-shadow: 0 4px 18px var(--purple-glow);
     }
-
-    .spin-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .spin-btn:hover:not(:disabled) {
-      transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 10px 40px rgba(108, 92, 231, 0.55);
-    }
-
-    .spin-btn:hover:not(:disabled)::before {
-      opacity: 1;
-    }
-
-    .spin-btn:active:not(:disabled) {
-      transform: translateY(0) scale(0.98);
-    }
-
-    .spin-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      filter: grayscale(0.3);
-    }
-
-    /* ===== PANEL (Settings) ===== */
-    .panel {
-      background: var(--bg-glass);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--border-glass);
-      border-radius: var(--radius-lg);
-      padding: 28px;
-      width: 340px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-      animation: fadeInUp 0.8s ease-out 0.3s both;
-    }
-
-    .panel-title {
-      font-size: 1.2rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .panel-title .icon {
-      font-size: 1.4rem;
-    }
-
-    .panel-desc {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      line-height: 1.5;
-    }
-
-    .panel textarea {
-      width: 100%;
-      min-height: 180px;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border-glass);
-      border-radius: var(--radius-md);
-      padding: 14px 16px;
-      font-family: inherit;
-      font-size: 0.95rem;
-      color: var(--text-primary);
-      resize: vertical;
-      transition: border-color 0.3s, box-shadow 0.3s;
-      line-height: 1.7;
-    }
-
-    .panel textarea:focus {
-      outline: none;
-      border-color: var(--accent-2);
-      box-shadow: 0 0 0 3px rgba(162, 155, 254, 0.15);
-    }
-
-    .panel textarea::placeholder {
-      color: var(--text-secondary);
-      opacity: 0.6;
-    }
-
-    .update-btn {
-      padding: 13px 24px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      font-family: inherit;
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      background: linear-gradient(135deg, #00cec9, #00b894);
-      box-shadow: 0 4px 18px rgba(0, 206, 201, 0.25);
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .update-btn:hover {
+    .btn-next:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 6px 24px rgba(0, 206, 201, 0.4);
+      box-shadow: 0 8px 28px rgba(139,92,246,0.45);
+    }
+    .btn-next:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-submit {
+      color: #fff;
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      box-shadow: 0 4px 18px rgba(16,185,129,0.3);
+    }
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(16,185,129,0.4);
     }
 
-    .update-btn:active {
-      transform: translateY(0);
-    }
-
-    /* Item count badge */
-    .item-count {
-      font-size: 0.8rem;
-      color: var(--accent-2);
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .item-count .badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(108, 92, 231, 0.2);
-      border: 1px solid rgba(108, 92, 231, 0.3);
-      border-radius: 20px;
-      padding: 2px 10px;
-      font-weight: 700;
-      min-width: 28px;
-    }
-
-    /* ===== HISTORY SECTION ===== */
-    .history-section {
-      width: 100%;
-      max-width: 760px;
-      animation: fadeInUp 0.8s ease-out 0.45s both;
-    }
-
-    .history-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
-
-    .history-header h3 {
-      font-size: 1.05rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .clear-history-btn {
-      padding: 6px 14px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      font-family: inherit;
-      color: var(--danger);
-      background: rgba(255, 107, 107, 0.1);
-      border: 1px solid rgba(255, 107, 107, 0.2);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .clear-history-btn:hover {
-      background: rgba(255, 107, 107, 0.2);
-    }
-
-    .history-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .history-item {
-      background: var(--bg-glass);
-      border: 1px solid var(--border-glass);
-      border-radius: 30px;
-      padding: 6px 16px;
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      animation: popIn 0.35s ease-out;
-    }
-
-    .history-item .h-num {
-      color: var(--accent-2);
-      font-weight: 700;
-      font-size: 0.75rem;
-    }
-
-    @keyframes popIn {
-      from {
-        opacity: 0;
-        transform: scale(0.7);
-      }
-
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    .history-empty {
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-      font-style: italic;
-    }
-
-    /* ===== RESULT OVERLAY / POPUP ===== */
-    .result-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.65);
-      backdrop-filter: blur(8px);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s ease;
-    }
-
-    .result-overlay.active {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .result-card {
-      background: linear-gradient(145deg, rgba(30, 30, 60, 0.95), rgba(15, 15, 35, 0.98));
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: var(--radius-lg);
-      padding: 48px 52px;
+    /* ===== MÀN HÌNH KẾT QUẢ ===== */
+    .result-screen {
+      width: 100%; max-width: 560px;
       text-align: center;
-      transform: scale(0.7) translateY(30px);
-      transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-      box-shadow:
-        0 30px 80px rgba(0, 0, 0, 0.6),
-        0 0 60px var(--accent-glow);
-      max-width: 440px;
-      width: 90%;
+      animation: fadeUp .6s ease-out;
     }
-
-    .result-overlay.active .result-card {
-      transform: scale(1) translateY(0);
+    .result-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 44px 32px;
     }
-
-    .result-emoji {
-      font-size: 4rem;
-      margin-bottom: 12px;
-      animation: bounce 0.6s ease infinite alternate;
+    .result-emoji { font-size: 4rem; margin-bottom: 10px; }
+    .result-title {
+      font-size: 1.6rem; font-weight: 800; margin-bottom: 6px;
     }
+    .result-sub { color: var(--text-2); font-size: .92rem; margin-bottom: 22px; }
 
-    @keyframes bounce {
-      from {
-        transform: translateY(0);
-      }
-
-      to {
-        transform: translateY(-10px);
-      }
+    /* Vòng tròn điểm */
+    .score-ring-wrap {
+      width: 160px; height: 160px;
+      margin: 0 auto 24px;
+      position: relative;
     }
-
-    .result-label {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      font-weight: 600;
-      margin-bottom: 8px;
+    .score-ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .score-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 10; }
+    .score-ring-fill {
+      fill: none; stroke-width: 10; stroke-linecap: round;
+      transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);
     }
+    .score-ring-text {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .score-number { font-size: 2.4rem; font-weight: 900; }
+    .score-of { font-size: .82rem; color: var(--text-2); font-weight: 600; }
 
-    .result-value {
-      font-size: 2rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, var(--gold), #ffaa00);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    /* Phân loại đánh giá */
+    .grade-tag {
+      display: inline-block;
+      padding: 6px 20px;
+      border-radius: 30px;
+      font-size: .85rem; font-weight: 700;
+      margin-bottom: 24px;
+    }
+    .grade-excellent { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid var(--green-border); }
+    .grade-good      { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+    .grade-ok        { background: rgba(251,191,36,0.12); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
+    .grade-low       { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+
+    /* Chi tiết từng câu */
+    .review-list {
+      text-align: left;
+      display: flex; flex-direction: column; gap: 8px;
       margin-bottom: 28px;
-      line-height: 1.3;
+    }
+    .review-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--r-sm);
+      font-size: .85rem;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border);
+    }
+    .review-icon { font-size: 1.1rem; min-width: 22px; text-align: center; }
+    .review-q { flex: 1; color: var(--text-2); }
+    .review-ans { font-weight: 600; white-space: nowrap; }
+    .review-ans.c { color: var(--green); }
+    .review-ans.w { color: var(--red); }
+
+    .retry-btn {
+      padding: 14px 44px;
+      font-size: 1rem; font-weight: 700; font-family: inherit;
+      color: #fff; border: none; border-radius: 50px; cursor: pointer;
+      background: linear-gradient(135deg, var(--purple), var(--blue));
+      box-shadow: 0 6px 24px var(--purple-glow);
+      transition: all .3s;
+    }
+    .retry-btn:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 10px 36px rgba(139,92,246,0.5);
     }
 
-    .close-result-btn {
-      padding: 12px 40px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      font-family: inherit;
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 40px;
-      cursor: pointer;
-      transition: all 0.25s;
-    }
+    /* ===== CONFETTI ===== */
+    #confetti { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
 
-    .close-result-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      transform: translateY(-1px);
-    }
-
-    /* ===== CONFETTI CANVAS ===== */
-    #confettiCanvas {
-      position: fixed;
-      inset: 0;
-      z-index: 999;
-      pointer-events: none;
-    }
-
-    /* ===== TOAST NOTIFICATION ===== */
-    .toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: rgba(30, 30, 50, 0.95);
-      border: 1px solid var(--border-glass);
-      border-radius: var(--radius-md);
-      padding: 12px 24px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--text-primary);
-      z-index: 2000;
-      opacity: 0;
-      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-      pointer-events: none;
-      backdrop-filter: blur(12px);
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
+    /* ===== ẨN / HIỆN ===== */
+    .hidden { display: none !important; }
 
     /* ===== RESPONSIVE ===== */
-    @media (max-width: 820px) {
-      .main-content {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .panel {
-        width: 100%;
-        max-width: 420px;
-      }
-
-      .wheel-wrapper {
-        width: 340px;
-        height: 340px;
-      }
-    }
-
-    @media (max-width: 400px) {
-      .wheel-wrapper {
-        width: 280px;
-        height: 280px;
-      }
-
-      .app-header h1 {
-        font-size: 1.8rem;
-      }
-
-      .result-card {
-        padding: 32px 24px;
-      }
-
-      .result-value {
-        font-size: 1.5rem;
-      }
+    @media (max-width: 500px) {
+      .card { padding: 24px 18px; }
+      .q-text { font-size: 1rem; }
+      .opt-btn { padding: 12px 14px; font-size: .88rem; }
+      .result-card { padding: 32px 18px; }
     }
   </style>
 </head>
-
 <body>
 
-  <!-- Confetti overlay canvas -->
-  <canvas id="confettiCanvas"></canvas>
+  <!-- Canvas nền sao -->
+  <canvas id="starfield"></canvas>
+  <!-- Canvas confetti -->
+  <canvas id="confetti"></canvas>
 
-  <!-- Result popup overlay -->
-  <div class="result-overlay" id="resultOverlay">
-    <div class="result-card">
-      <div class="result-emoji">🎉</div>
-      <div class="result-label">Kết quả</div>
-      <div class="result-value" id="resultValue">—</div>
-      <button class="close-result-btn" id="closeResultBtn">Đóng</button>
-    </div>
-  </div>
+  <div class="app" id="app">
 
-  <!-- Toast notification -->
-  <div class="toast" id="toast"></div>
-
-  <div class="app-container">
     <!-- Header -->
-    <header class="app-header">
-      <h1>🎯 Vòng Quay May Mắn</h1>
-      <p>Nhấn quay và để vận may quyết định!</p>
+    <header class="header">
+      <h1>🌌 Trắc Nghiệm Vũ Trụ</h1>
+      <p>Khám phá kiến thức thiên văn qua 10 câu hỏi thú vị!</p>
     </header>
 
-    <!-- Main content: Wheel + Panel -->
-    <div class="main-content">
+    <!-- ====== MÀN HÌNH CÂU HỎI ====== -->
+    <div id="quizScreen" class="quiz-screen" style="width:100%;max-width:560px;display:flex;flex-direction:column;align-items:center;gap:24px;">
 
-      <!-- Wheel Section -->
-      <section class="wheel-section">
-        <div class="wheel-wrapper" id="wheelWrapper">
-          <div class="pointer" id="pointer"></div>
-          <canvas id="wheelCanvas" width="420" height="420"></canvas>
-          <div class="center-hub">🎯</div>
+      <!-- Thanh tiến trình -->
+      <div class="progress-bar-wrap">
+        <div class="progress-info">
+          <span class="step" id="stepLabel">Câu 1 / 10</span>
+          <span class="score-live" id="scoreLive">Điểm: 0</span>
         </div>
-        <button class="spin-btn" id="spinBtn">🚀 Quay</button>
-      </section>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
 
-      <!-- Settings Panel -->
-      <aside class="panel">
-        <div class="panel-title">
-          <span class="icon">⚙️</span> Tuỳ chỉnh vòng quay
-        </div>
-        <p class="panel-desc">
-          Nhập mỗi lựa chọn trên một dòng riêng biệt. Nhấn "Cập nhật" để áp dụng thay đổi.
-        </p>
-        <textarea id="optionsInput" placeholder="Nhập các lựa chọn, mỗi dòng một mục..."></textarea>
-        <div class="item-count">
-          Số mục: <span class="badge" id="itemCountBadge">6</span>
-        </div>
-        <button class="update-btn" id="updateBtn">
-          ✨ Cập nhật vòng quay
-        </button>
-      </aside>
+      <!-- Thẻ câu hỏi -->
+      <div class="card" id="questionCard">
+        <div class="q-number" id="qNumber">Câu hỏi 1</div>
+        <div class="q-text" id="qText"></div>
+        <div class="options" id="optionsWrap"></div>
+        <div class="explanation hidden" id="explanationEl"></div>
+      </div>
+
+      <!-- Điều hướng -->
+      <div class="nav-row">
+        <button class="nav-btn btn-prev" id="prevBtn" disabled>← Câu trước</button>
+        <button class="nav-btn btn-next" id="nextBtn">Tiếp theo →</button>
+      </div>
 
     </div>
 
-    <!-- History Section -->
-    <section class="history-section" id="historySection">
-      <div class="history-header">
-        <h3>📜 Lịch sử kết quả</h3>
-        <button class="clear-history-btn" id="clearHistoryBtn">Xoá lịch sử</button>
+    <!-- ====== MÀN HÌNH KẾT QUẢ ====== -->
+    <div id="resultScreen" class="result-screen hidden">
+      <div class="result-card">
+        <div class="result-emoji" id="resEmoji">🏆</div>
+        <div class="result-title" id="resTitle">Kết quả</div>
+        <div class="result-sub" id="resSub">Bạn đã hoàn thành bài trắc nghiệm!</div>
+
+        <!-- Vòng tròn điểm -->
+        <div class="score-ring-wrap">
+          <svg viewBox="0 0 160 160">
+            <circle class="score-ring-bg" cx="80" cy="80" r="68"/>
+            <circle class="score-ring-fill" id="ringFill" cx="80" cy="80" r="68"
+                    stroke="url(#ringGrad)" stroke-dasharray="427.26" stroke-dashoffset="427.26"/>
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="var(--purple)"/>
+                <stop offset="100%" stop-color="var(--cyan)"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="score-ring-text">
+            <span class="score-number" id="scoreNum">0</span>
+            <span class="score-of">/ 10</span>
+          </div>
+        </div>
+
+        <div id="gradeTag" class="grade-tag grade-excellent"></div>
+        <div class="review-list" id="reviewList"></div>
+        <button class="retry-btn" id="retryBtn">🔄 Làm lại</button>
       </div>
-      <div class="history-list" id="historyList">
-        <span class="history-empty">Chưa có kết quả nào.</span>
-      </div>
-    </section>
+    </div>
+
   </div>
 
   <script>
-    // =========================================================
-    // ===== CẤU HÌNH MẶC ĐỊNH ================================
-    // =========================================================
+  (function () {
+    'use strict';
 
-    /** Danh sách lựa chọn mặc định */
-    const DEFAULT_OPTIONS = [
-      'Câu cá',
-      'Đập đá',
-      'Tiệc trò chơi',
-      'Bắt bọ+thẻ',
-      'Leo tháp',
-      'Đào rương'
+    // ═══════════════════════════════════════════════
+    // DỮ LIỆU: 10 CÂU HỎI TRẮC NGHIỆM VỀ VŨ TRỤ
+    // ═══════════════════════════════════════════════
+
+    var questions = [
+      {
+        q: 'Hành tinh nào trong Hệ Mặt Trời có kích thước lớn nhất?',
+        opts: ['Sao Thổ', 'Sao Mộc', 'Sao Thiên Vương', 'Sao Hải Vương'],
+        ans: 1,
+        explain: 'Sao Mộc (Jupiter) là hành tinh lớn nhất Hệ Mặt Trời, có đường kính khoảng 139.820 km — gấp hơn 11 lần Trái Đất.'
+      },
+      {
+        q: 'Ánh sáng từ Mặt Trời mất khoảng bao lâu để đến được Trái Đất?',
+        opts: ['8 giây', '8 phút', '8 giờ', '8 ngày'],
+        ans: 1,
+        explain: 'Ánh sáng di chuyển với vận tốc khoảng 300.000 km/s, và khoảng cách từ Mặt Trời đến Trái Đất là ~150 triệu km, nên mất khoảng 8 phút 20 giây.'
+      },
+      {
+        q: 'Mặt Trăng mất bao lâu để quay một vòng quanh Trái Đất?',
+        opts: ['Khoảng 7 ngày', 'Khoảng 14 ngày', 'Khoảng 27 ngày', 'Khoảng 60 ngày'],
+        ans: 2,
+        explain: 'Mặt Trăng quay quanh Trái Đất với chu kì khoảng 27,3 ngày (chu kì thiên văn). Đây cũng là lí do chúng ta thấy các pha Mặt Trăng thay đổi theo tháng.'
+      },
+      {
+        q: 'Hành tinh nào được gọi là "Hành tinh Đỏ"?',
+        opts: ['Sao Kim', 'Sao Hoả', 'Sao Mộc', 'Sao Thuỷ'],
+        ans: 1,
+        explain: 'Sao Hoả (Mars) có bề mặt giàu oxit sắt (gỉ sắt) nên mang màu đỏ cam đặc trưng, vì thế được gọi là "Hành tinh Đỏ".'
+      },
+      {
+        q: 'Dải Ngân Hà thuộc loại thiên hà nào?',
+        opts: ['Thiên hà elip', 'Thiên hà xoắn ốc', 'Thiên hà vô định hình', 'Thiên hà thấu kính'],
+        ans: 1,
+        explain: 'Dải Ngân Hà là một thiên hà xoắn ốc có thanh (barred spiral galaxy), có đường kính khoảng 100.000 năm ánh sáng và chứa hàng trăm tỉ ngôi sao.'
+      },
+      {
+        q: 'Ngôi sao gần Trái Đất nhất (ngoài Mặt Trời) là ngôi sao nào?',
+        opts: ['Sao Bắc Cực (Polaris)', 'Proxima Centauri', 'Sao Thiên Lang (Sirius)', 'Sao Chức Nữ (Vega)'],
+        ans: 1,
+        explain: 'Proxima Centauri nằm cách Trái Đất khoảng 4,24 năm ánh sáng, thuộc hệ sao Alpha Centauri, là ngôi sao gần nhất ngoài Mặt Trời.'
+      },
+      {
+        q: 'Trên Mặt Trăng, một người nhảy sẽ bay cao hơn trên Trái Đất vì lí do gì?',
+        opts: [
+          'Mặt Trăng không có khí quyển',
+          'Lực hấp dẫn trên Mặt Trăng yếu hơn Trái Đất',
+          'Mặt Trăng quay nhanh hơn Trái Đất',
+          'Nhiệt độ trên Mặt Trăng rất thấp'
+        ],
+        ans: 1,
+        explain: 'Lực hấp dẫn trên Mặt Trăng chỉ bằng khoảng 1/6 so với Trái Đất (do khối lượng nhỏ hơn). Vì vậy, cùng một lực nhảy, bạn sẽ bay cao gấp khoảng 6 lần!'
+      },
+      {
+        q: 'Hành tinh nào trong Hệ Mặt Trời có nhiều vệ tinh (mặt trăng) tự nhiên nhất tính đến nay?',
+        opts: ['Sao Mộc', 'Sao Thổ', 'Sao Thiên Vương', 'Sao Hải Vương'],
+        ans: 1,
+        explain: 'Tính đến năm 2024, Sao Thổ giữ kỷ lục với hơn 140 vệ tinh tự nhiên được xác nhận, vượt qua Sao Mộc (khoảng 95 vệ tinh).'
+      },
+      {
+        q: 'Hiện tượng nhật thực xảy ra khi nào?',
+        opts: [
+          'Trái Đất nằm giữa Mặt Trời và Mặt Trăng',
+          'Mặt Trăng nằm giữa Mặt Trời và Trái Đất',
+          'Mặt Trời nằm giữa Trái Đất và Mặt Trăng',
+          'Ba thiên thể tạo thành tam giác'
+        ],
+        ans: 1,
+        explain: 'Nhật thực xảy ra khi Mặt Trăng đi vào giữa Mặt Trời và Trái Đất, che khuất một phần hoặc toàn bộ ánh sáng Mặt Trời chiếu đến Trái Đất.'
+      },
+      {
+        q: 'Hành tinh nào có vành đai (rings) rõ ràng và nổi tiếng nhất trong Hệ Mặt Trời?',
+        opts: ['Sao Mộc', 'Sao Thiên Vương', 'Sao Thổ', 'Sao Hải Vương'],
+        ans: 2,
+        explain: 'Sao Thổ (Saturn) nổi tiếng với hệ thống vành đai rộng lớn và tuyệt đẹp, được cấu tạo chủ yếu từ các hạt băng và đá có kích thước từ hạt cát đến ngôi nhà.'
+      }
     ];
 
-    /** Bảng màu cho các ô vòng quay (dùng HSL cho đẹp & đa dạng) */
-    const COLORS = [
-      '#6c5ce7', '#00cec9', '#fd79a8', '#ffc048',
-      '#00b894', '#e17055', '#0984e3', '#d63031',
-      '#e84393', '#2d3436', '#636e72', '#55efc4',
-      '#74b9ff', '#fab1a0', '#dfe6e9', '#a29bfe'
-    ];
+    // ─── TRẠNG THÁI ──────────────────────────────
+    var current   = 0;             // Chỉ số câu hỏi hiện tại
+    var score     = 0;             // Điểm tích luỹ
+    var answered  = [];            // Mảng lưu chỉ số đáp án đã chọn (-1 = chưa)
+    var total     = questions.length;
 
-    // =========================================================
-    // ===== BIẾN TRẠNG THÁI ===================================
-    // =========================================================
+    // Khởi tạo mảng answered
+    for (var i = 0; i < total; i++) answered.push(-1);
 
-    let options = [...DEFAULT_OPTIONS];  // Danh sách hiện tại
-    let isSpinning = false;              // Đang quay hay không
-    let currentAngle = 0;               // Góc quay hiện tại (radian)
-    let history = [];                    // Lịch sử kết quả
+    // ─── DOM ─────────────────────────────────────
+    var quizScreen   = document.getElementById('quizScreen');
+    var resultScreen = document.getElementById('resultScreen');
+    var stepLabel    = document.getElementById('stepLabel');
+    var scoreLive    = document.getElementById('scoreLive');
+    var progressFill = document.getElementById('progressFill');
+    var qNumber      = document.getElementById('qNumber');
+    var qText        = document.getElementById('qText');
+    var optionsWrap  = document.getElementById('optionsWrap');
+    var explanationEl= document.getElementById('explanationEl');
+    var prevBtn      = document.getElementById('prevBtn');
+    var nextBtn      = document.getElementById('nextBtn');
+    var retryBtn     = document.getElementById('retryBtn');
 
-    // DOM references
-    const canvas = document.getElementById('wheelCanvas');
-    const ctx = canvas.getContext('2d');
-    const spinBtn = document.getElementById('spinBtn');
-    const optionsInput = document.getElementById('optionsInput');
-    const updateBtn = document.getElementById('updateBtn');
-    const itemCountBadge = document.getElementById('itemCountBadge');
-    const resultOverlay = document.getElementById('resultOverlay');
-    const resultValue = document.getElementById('resultValue');
-    const closeResultBtn = document.getElementById('closeResultBtn');
-    const historyList = document.getElementById('historyList');
-    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    const pointer = document.getElementById('pointer');
-    const toast = document.getElementById('toast');
-    const confettiCanvas = document.getElementById('confettiCanvas');
-    const confettiCtx = confettiCanvas.getContext('2d');
+    // ═══════════════════════════════════════════════
+    // RENDER CÂU HỎI
+    // ═══════════════════════════════════════════════
 
-    // =========================================================
-    // ===== VẼ VÒNG QUAY =====================================
-    // =========================================================
+    var LETTERS = ['A', 'B', 'C', 'D'];
 
-    /**
-     * Vẽ toàn bộ vòng quay dựa trên danh sách options hiện tại.
-     * Mỗi ô được chia đều theo góc quay.
-     */
-    function drawWheel() {
-      const size = canvas.width;
-      const center = size / 2;
-      const radius = center - 4;
-      const numSlices = options.length;
-      const sliceAngle = (2 * Math.PI) / numSlices;
+    function renderQuestion() {
+      var q = questions[current];
 
-      ctx.clearRect(0, 0, size, size);
+      // Cập nhật thanh tiến trình
+      stepLabel.textContent = 'Câu ' + (current + 1) + ' / ' + total;
+      scoreLive.textContent = 'Điểm: ' + score;
+      progressFill.style.width = ((current + 1) / total * 100) + '%';
 
-      for (let i = 0; i < numSlices; i++) {
-        const startAngle = currentAngle + i * sliceAngle;
-        const endAngle = startAngle + sliceAngle;
+      // Tiêu đề & nội dung câu hỏi
+      qNumber.textContent = 'Câu hỏi ' + (current + 1);
+      qText.textContent = q.q;
 
-        // --- Vẽ phần ô ---
-        ctx.beginPath();
-        ctx.moveTo(center, center);
-        ctx.arc(center, center, radius, startAngle, endAngle);
-        ctx.closePath();
-        ctx.fillStyle = COLORS[i % COLORS.length];
-        ctx.fill();
+      // Tạo các nút lựa chọn
+      optionsWrap.innerHTML = '';
+      var alreadyAnswered = answered[current] !== -1;
 
-        // --- Viền mỏng giữa các ô ---
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-        ctx.stroke();
+      for (var i = 0; i < q.opts.length; i++) {
+        var btn = document.createElement('button');
+        btn.className = 'opt-btn';
+        btn.type = 'button';
+        btn.setAttribute('data-idx', i);
+        btn.innerHTML = '<span class="opt-label">' + LETTERS[i] + '</span> <span>' + esc(q.opts[i]) + '</span>';
 
-        // --- Vẽ nhãn chữ ---
-        ctx.save();
-        ctx.translate(center, center);
-        const midAngle = startAngle + sliceAngle / 2;
-        ctx.rotate(midAngle);
-
-        // Chọn màu chữ tương phản
-        ctx.fillStyle = '#fff';
-        ctx.font = `bold ${Math.max(11, Math.min(15, 180 / numSlices))}px 'Inter', sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Vẽ chữ dọc theo bán kính, offset ra phía ngoài
-        const textRadius = radius * 0.62;
-        const label = options[i].length > 14
-          ? options[i].substring(0, 13) + '…'
-          : options[i];
-
-        // Thêm shadow cho dễ đọc
-        ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 4;
-        ctx.fillText(label, textRadius, 0);
-        ctx.shadowBlur = 0;
-
-        ctx.restore();
-      }
-
-      // --- Viền ngoài ---
-      ctx.beginPath();
-      ctx.arc(center, center, radius, 0, 2 * Math.PI);
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      ctx.stroke();
-    }
-
-    // =========================================================
-    // ===== LOGIC QUAY ========================================
-    // =========================================================
-
-    /**
-     * Bắt đầu hiệu ứng quay.
-     * - Tạo góc quay ngẫu nhiên lớn (đảm bảo >= vài vòng)
-     * - Dùng easing (ease-out cubic) để gia tốc rồi chậm dần
-     */
-    function startSpin() {
-      if (isSpinning || options.length === 0) return;
-      isSpinning = true;
-      spinBtn.disabled = true;
-
-      // Tổng góc quay: 5-10 vòng + thêm một góc ngẫu nhiên
-      const extraTurns = 5 + Math.random() * 5;                   // 5–10 vòng
-      const randomSliceOffset = Math.random() * 2 * Math.PI;      // vị trí dừng ngẫu nhiên
-      const totalRotation = extraTurns * 2 * Math.PI + randomSliceOffset;
-
-      const startAngle = currentAngle;
-      const targetAngle = startAngle + totalRotation;
-      const duration = 4000 + Math.random() * 1500; // 4–5.5 giây
-      const startTime = performance.now();
-
-      /**
-       * Hàm easing: cubic ease-out → quay nhanh lúc đầu, chậm dần cuối
-       */
-      function easeOutCubic(t) {
-        return 1 - Math.pow(1 - t, 3);
-      }
-
-      function animateSpin(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easedProgress = easeOutCubic(progress);
-
-        currentAngle = startAngle + totalRotation * easedProgress;
-        drawWheel();
-
-        // Hiệu ứng pointer nhảy khi đi qua biên ô
-        const numSlices = options.length;
-        const sliceAngle = (2 * Math.PI) / numSlices;
-        const normalised = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        const sliceIndex = Math.floor(normalised / sliceAngle);
-        if (animateSpin._lastSlice !== undefined && sliceIndex !== animateSpin._lastSlice) {
-          pointer.classList.remove('bounce');
-          // Force reflow to restart animation
-          void pointer.offsetWidth;
-          pointer.classList.add('bounce');
-        }
-        animateSpin._lastSlice = sliceIndex;
-
-        if (progress < 1) {
-          requestAnimationFrame(animateSpin);
+        // Nếu đã trả lời → hiển thị trạng thái đúng/sai
+        if (alreadyAnswered) {
+          btn.disabled = true;
+          if (i === q.ans) btn.classList.add('correct');
+          if (i === answered[current] && i !== q.ans) btn.classList.add('wrong');
         } else {
-          // Quay xong → xác định kết quả
-          currentAngle = targetAngle % (2 * Math.PI);
-          drawWheel();
-          determineResult();
+          btn.addEventListener('click', handleAnswer);
         }
+
+        optionsWrap.appendChild(btn);
       }
 
-      requestAnimationFrame(animateSpin);
+      // Hiển thị/ẩn giải thích
+      if (alreadyAnswered) {
+        explanationEl.innerHTML = '💡 <strong>Giải thích:</strong> ' + esc(q.explain);
+        explanationEl.classList.remove('hidden');
+      } else {
+        explanationEl.classList.add('hidden');
+      }
+
+      // Cập nhật nút điều hướng
+      prevBtn.disabled = (current === 0);
+
+      // Nút cuối → "Xem kết quả" nếu đã trả lời hết
+      var allDone = answered.every(function (a) { return a !== -1; });
+      if (current === total - 1 && allDone) {
+        nextBtn.textContent = '📊 Xem kết quả';
+        nextBtn.className = 'nav-btn btn-submit';
+      } else {
+        nextBtn.textContent = 'Tiếp theo →';
+        nextBtn.className = 'nav-btn btn-next';
+      }
+      nextBtn.disabled = false;
+
+      // Hiệu ứng nhẹ khi chuyển câu
+      var card = document.getElementById('questionCard');
+      card.style.animation = 'none';
+      void card.offsetWidth;
+      card.style.animation = 'fadeUp .35s ease-out';
     }
 
-    /**
-     * Xác định ô mà kim chỉ trúng vào.
-     * Kim chỉ ở vị trí "12 giờ" tức góc -π/2 (hoặc 3π/2).
-     */
-    function determineResult() {
-      const numSlices = options.length;
-      const sliceAngle = (2 * Math.PI) / numSlices;
+    // ═══════════════════════════════════════════════
+    // XỬ LÝ CHỌN ĐÁP ÁN
+    // ═══════════════════════════════════════════════
 
-      // Kim ở góc -π/2 (đỉnh). Tính góc tương đối so với vòng quay.
-      // Ô bắt đầu từ currentAngle + i*sliceAngle
-      // Kim ở 3π/2 → normalise lại
-      const pointerAngle = (2 * Math.PI) - ((currentAngle + Math.PI / 2) % (2 * Math.PI));
-      const normalPointer = ((pointerAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      const winIndex = Math.floor(normalPointer / sliceAngle) % numSlices;
-      const winner = options[winIndex];
+    function handleAnswer(e) {
+      var btn = e.currentTarget;
+      var idx = parseInt(btn.getAttribute('data-idx'), 10);
+      var q   = questions[current];
 
-      // Thêm vào lịch sử
-      history.unshift(winner);
-      renderHistory();
+      answered[current] = idx;
 
-      // Hiện popup kết quả
-      showResult(winner);
+      // Tính điểm
+      if (idx === q.ans) score++;
 
-      // Bắn confetti
-      launchConfetti();
+      // Disable tất cả nút & đánh dấu đúng/sai
+      var btns = optionsWrap.querySelectorAll('.opt-btn');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].disabled = true;
+        var bi = parseInt(btns[i].getAttribute('data-idx'), 10);
+        if (bi === q.ans) btns[i].classList.add('correct');
+        if (bi === idx && bi !== q.ans) btns[i].classList.add('wrong');
+      }
 
-      isSpinning = false;
-      spinBtn.disabled = false;
+      // Hiện giải thích
+      explanationEl.innerHTML = '💡 <strong>Giải thích:</strong> ' + esc(q.explain);
+      explanationEl.classList.remove('hidden');
+
+      // Cập nhật điểm live
+      scoreLive.textContent = 'Điểm: ' + score;
+
+      // Cập nhật nút "Xem kết quả" nếu đây là câu cuối & tất cả đã trả lời
+      var allDone = answered.every(function (a) { return a !== -1; });
+      if (current === total - 1 && allDone) {
+        nextBtn.textContent = '📊 Xem kết quả';
+        nextBtn.className = 'nav-btn btn-submit';
+      }
     }
 
-    // =========================================================
-    // ===== POPUP KẾT QUẢ ====================================
-    // =========================================================
+    // ═══════════════════════════════════════════════
+    // ĐIỀU HƯỚNG
+    // ═══════════════════════════════════════════════
 
-    function showResult(text) {
-      resultValue.textContent = text;
-      resultOverlay.classList.add('active');
-    }
-
-    function hideResult() {
-      resultOverlay.classList.remove('active');
-    }
-
-    closeResultBtn.addEventListener('click', hideResult);
-    resultOverlay.addEventListener('click', (e) => {
-      if (e.target === resultOverlay) hideResult();
+    prevBtn.addEventListener('click', function () {
+      if (current > 0) { current--; renderQuestion(); }
     });
 
-    // =========================================================
-    // ===== CẬP NHẬT DANH SÁCH ================================
-    // =========================================================
-
-    /** Điền textarea bằng danh sách hiện tại */
-    function syncTextarea() {
-      optionsInput.value = options.join('\n');
-      itemCountBadge.textContent = options.length;
-    }
-
-    /** Cập nhật vòng quay từ textarea */
-    function updateOptionsFromInput() {
-      const raw = optionsInput.value.trim();
-      if (!raw) {
-        showToast('⚠️ Vui lòng nhập ít nhất 2 lựa chọn!');
-        return;
+    nextBtn.addEventListener('click', function () {
+      var allDone = answered.every(function (a) { return a !== -1; });
+      if (current === total - 1 && allDone) {
+        showResult();
+      } else if (current < total - 1) {
+        current++;
+        renderQuestion();
       }
-      const newOpts = raw
-        .split('\n')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-
-      if (newOpts.length < 2) {
-        showToast('⚠️ Cần ít nhất 2 lựa chọn để tạo vòng quay.');
-        return;
-      }
-
-      options = newOpts;
-      itemCountBadge.textContent = options.length;
-      currentAngle = 0;
-      drawWheel();
-      showToast(`✅ Đã cập nhật vòng quay với ${options.length} mục!`);
-    }
-
-    /** Đếm số mục khi nhập */
-    optionsInput.addEventListener('input', () => {
-      const count = optionsInput.value
-        .split('\n')
-        .map(s => s.trim())
-        .filter(s => s.length > 0).length;
-      itemCountBadge.textContent = count;
     });
 
-    updateBtn.addEventListener('click', updateOptionsFromInput);
+    // ═══════════════════════════════════════════════
+    // MÀN HÌNH KẾT QUẢ
+    // ═══════════════════════════════════════════════
 
-    // =========================================================
-    // ===== LỊCH SỬ ==========================================
-    // =========================================================
+    function showResult() {
+      quizScreen.classList.add('hidden');
+      resultScreen.classList.remove('hidden');
 
-    function renderHistory() {
-      if (history.length === 0) {
-        historyList.innerHTML = '<span class="history-empty">Chưa có kết quả nào.</span>';
-        return;
+      // Emoji & nhận xét theo mức điểm
+      var pct = score / total;
+      var emoji, title, sub, gradeCls;
+
+      if (pct >= 0.9) {
+        emoji = '🏆'; title = 'Xuất sắc!';
+        sub = 'Bạn có kiến thức thiên văn tuyệt vời!';
+        gradeCls = 'grade-excellent';
+      } else if (pct >= 0.7) {
+        emoji = '🌟'; title = 'Rất giỏi!';
+        sub = 'Kiến thức vũ trụ của bạn khá vững chắc.';
+        gradeCls = 'grade-good';
+      } else if (pct >= 0.5) {
+        emoji = '🚀'; title = 'Khá tốt!';
+        sub = 'Cố gắng thêm một chút nữa nhé!';
+        gradeCls = 'grade-ok';
+      } else {
+        emoji = '📚'; title = 'Cần học thêm!';
+        sub = 'Hãy đọc thêm về vũ trụ và thử lại nhé.';
+        gradeCls = 'grade-low';
       }
-      historyList.innerHTML = history.map((item, i) =>
-        `<div class="history-item">
-          <span class="h-num">#${i + 1}</span> ${escapeHtml(item)}
-        </div>`
-      ).join('');
+
+      document.getElementById('resEmoji').textContent = emoji;
+      document.getElementById('resTitle').textContent = title;
+      document.getElementById('resSub').textContent = sub;
+
+      var gradeTag = document.getElementById('gradeTag');
+      gradeTag.textContent = score + ' / ' + total + ' điểm (' + Math.round(pct * 100) + '%)';
+      gradeTag.className = 'grade-tag ' + gradeCls;
+
+      // Vòng tròn điểm — animate
+      var ring = document.getElementById('ringFill');
+      var circ = 2 * Math.PI * 68; // ≈ 427.26
+      var offset = circ - (circ * pct);
+      setTimeout(function () { ring.style.strokeDashoffset = offset; }, 100);
+
+      document.getElementById('scoreNum').textContent = score;
+
+      // Danh sách review từng câu
+      var reviewHtml = '';
+      for (var i = 0; i < total; i++) {
+        var isCorrect = answered[i] === questions[i].ans;
+        var icon = isCorrect ? '✅' : '❌';
+        var ansCls = isCorrect ? 'c' : 'w';
+        var userAns = answered[i] >= 0 ? questions[i].opts[answered[i]] : '—';
+        // Rút gọn câu hỏi nếu quá dài
+        var shortQ = questions[i].q.length > 50 ? questions[i].q.slice(0, 48) + '…' : questions[i].q;
+        reviewHtml += '<div class="review-item">'
+          + '<span class="review-icon">' + icon + '</span>'
+          + '<span class="review-q">' + esc(shortQ) + '</span>'
+          + '<span class="review-ans ' + ansCls + '">' + esc(userAns) + '</span>'
+          + '</div>';
+      }
+      document.getElementById('reviewList').innerHTML = reviewHtml;
+
+      // Confetti nếu giỏi
+      if (pct >= 0.7) fireConfetti();
     }
 
-    clearHistoryBtn.addEventListener('click', () => {
-      history = [];
-      renderHistory();
-      showToast('🗑️ Đã xoá lịch sử.');
+    // ═══════════════════════════════════════════════
+    // LÀM LẠI
+    // ═══════════════════════════════════════════════
+
+    retryBtn.addEventListener('click', function () {
+      current = 0;
+      score = 0;
+      for (var i = 0; i < total; i++) answered[i] = -1;
+
+      // Reset ring
+      document.getElementById('ringFill').style.strokeDashoffset = 427.26;
+
+      resultScreen.classList.add('hidden');
+      quizScreen.classList.remove('hidden');
+      renderQuestion();
     });
 
-    // =========================================================
-    // ===== TOAST =============================================
-    // =========================================================
+    // ═══════════════════════════════════════════════
+    // NỀN SAO NHẤP NHÁY (STARFIELD)
+    // ═══════════════════════════════════════════════
 
-    let toastTimeout = null;
-    function showToast(message) {
-      toast.textContent = message;
-      toast.classList.add('show');
-      clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
-    }
+    var starCvs = document.getElementById('starfield');
+    var starCtx = starCvs.getContext('2d');
+    var stars   = [];
 
-    // =========================================================
-    // ===== CONFETTI ==========================================
-    // =========================================================
-
-    let confettiParticles = [];
-    let confettiAnimId = null;
-
-    function resizeConfetti() {
-      confettiCanvas.width = window.innerWidth;
-      confettiCanvas.height = window.innerHeight;
-    }
-
-    function launchConfetti() {
-      resizeConfetti();
-      confettiParticles = [];
-
-      // Tạo 120 hạt confetti
-      for (let i = 0; i < 120; i++) {
-        confettiParticles.push({
-          x: Math.random() * confettiCanvas.width,
-          y: Math.random() * confettiCanvas.height * -1, // bắt đầu phía trên
-          w: 6 + Math.random() * 6,
-          h: 4 + Math.random() * 4,
-          color: COLORS[Math.floor(Math.random() * COLORS.length)],
-          vx: (Math.random() - 0.5) * 4,
-          vy: 2 + Math.random() * 4,
-          rotation: Math.random() * 360,
-          rotSpeed: (Math.random() - 0.5) * 10,
-          opacity: 1
+    function initStars() {
+      starCvs.width  = window.innerWidth;
+      starCvs.height = window.innerHeight;
+      stars = [];
+      var count = Math.min(200, Math.floor(starCvs.width * starCvs.height / 5000));
+      for (var i = 0; i < count; i++) {
+        stars.push({
+          x: Math.random() * starCvs.width,
+          y: Math.random() * starCvs.height,
+          r: .4 + Math.random() * 1.4,
+          a: .3 + Math.random() * .7,          // alpha
+          speed: .003 + Math.random() * .008,   // tốc độ nhấp nháy
+          phase: Math.random() * Math.PI * 2
         });
       }
-
-      if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
-      animateConfetti();
     }
 
-    function animateConfetti() {
-      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-      let alive = false;
+    function drawStars(t) {
+      starCtx.clearRect(0, 0, starCvs.width, starCvs.height);
+      for (var i = 0; i < stars.length; i++) {
+        var s = stars[i];
+        var alpha = s.a * (.55 + .45 * Math.sin(t * s.speed + s.phase));
+        starCtx.beginPath();
+        starCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        starCtx.fillStyle = 'rgba(255,255,255,' + alpha.toFixed(3) + ')';
+        starCtx.fill();
+      }
+      requestAnimationFrame(drawStars);
+    }
 
-      for (const p of confettiParticles) {
-        if (p.opacity <= 0) continue;
+    window.addEventListener('resize', initStars);
+    initStars();
+    requestAnimationFrame(drawStars);
+
+    // ═══════════════════════════════════════════════
+    // CONFETTI 🎊
+    // ═══════════════════════════════════════════════
+
+    var confCvs = document.getElementById('confetti');
+    var confCtx = confCvs.getContext('2d');
+    var confParts = [], confRaf = null;
+    var PALETTE = ['#8b5cf6','#06b6d4','#10b981','#fbbf24','#ef4444','#ec4899','#3b82f6','#f97316'];
+
+    function fireConfetti() {
+      confCvs.width  = window.innerWidth;
+      confCvs.height = window.innerHeight;
+      confParts = [];
+      for (var i = 0; i < 140; i++) {
+        confParts.push({
+          x: Math.random() * confCvs.width,
+          y: -Math.random() * confCvs.height,
+          w: 5 + Math.random() * 7,
+          h: 3 + Math.random() * 5,
+          c: PALETTE[Math.floor(Math.random() * PALETTE.length)],
+          vx: (Math.random() - .5) * 5,
+          vy: 2 + Math.random() * 5,
+          r: Math.random() * 360,
+          rs: (Math.random() - .5) * 14,
+          o: 1
+        });
+      }
+      if (confRaf) cancelAnimationFrame(confRaf);
+      tickConf();
+    }
+
+    function tickConf() {
+      confCtx.clearRect(0, 0, confCvs.width, confCvs.height);
+      var alive = false;
+      for (var i = 0; i < confParts.length; i++) {
+        var p = confParts[i];
+        if (p.o <= 0) continue;
         alive = true;
-
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.07; // trọng lực
-        p.rotation += p.rotSpeed;
-
-        // Mờ dần khi rơi xuống dưới
-        if (p.y > confettiCanvas.height * 0.7) {
-          p.opacity -= 0.015;
-        }
-
-        confettiCtx.save();
-        confettiCtx.translate(p.x, p.y);
-        confettiCtx.rotate((p.rotation * Math.PI) / 180);
-        confettiCtx.globalAlpha = Math.max(0, p.opacity);
-        confettiCtx.fillStyle = p.color;
-        confettiCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-        confettiCtx.restore();
+        p.x += p.vx; p.y += p.vy;
+        p.vy += .065; p.r += p.rs;
+        if (p.y > confCvs.height * .72) p.o -= .018;
+        confCtx.save();
+        confCtx.translate(p.x, p.y);
+        confCtx.rotate(p.r * Math.PI / 180);
+        confCtx.globalAlpha = Math.max(0, p.o);
+        confCtx.fillStyle = p.c;
+        confCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        confCtx.restore();
       }
-
-      if (alive) {
-        confettiAnimId = requestAnimationFrame(animateConfetti);
-      } else {
-        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-      }
+      if (alive) confRaf = requestAnimationFrame(tickConf);
+      else confCtx.clearRect(0, 0, confCvs.width, confCvs.height);
     }
 
-    // =========================================================
-    // ===== TIỆN ÍCH ==========================================
-    // =========================================================
+    // ═══════════════════════════════════════════════
+    // TIỆN ÍCH
+    // ═══════════════════════════════════════════════
 
-    /** Escape HTML để tránh XSS khi render lịch sử */
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
+    function esc(s) {
+      var d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
     }
 
-    // =========================================================
-    // ===== RESPONSIVE CANVAS =================================
-    // =========================================================
+    // ═══════════════════════════════════════════════
+    // KHỞI TẠO
+    // ═══════════════════════════════════════════════
+    renderQuestion();
 
-    function handleResize() {
-      const wrapper = document.getElementById('wheelWrapper');
-      const wrapperSize = wrapper.clientWidth;
-      canvas.width = wrapperSize;
-      canvas.height = wrapperSize;
-      drawWheel();
-    }
-
-    window.addEventListener('resize', () => {
-      handleResize();
-      resizeConfetti();
-    });
-
-    // =========================================================
-    // ===== SỰ KIỆN ==========================================
-    // =========================================================
-
-    spinBtn.addEventListener('click', startSpin);
-
-    // Cho phép click vào vòng quay để quay
-    canvas.addEventListener('click', startSpin);
-
-    // Phím Enter trong textarea → không submit, chỉ xuống dòng bình thường
-    // Phím Space trên Spin button
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && document.activeElement === spinBtn) {
-        e.preventDefault();
-        startSpin();
-      }
-    });
-
-    // =========================================================
-    // ===== KHỞI TẠO =========================================
-    // =========================================================
-
-    (function init() {
-      syncTextarea();
-      handleResize();
-      drawWheel();
-    })();
+  })();
   </script>
 </body>
-
 </html>
