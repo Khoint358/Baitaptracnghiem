@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Vòng quay may mắn - Ứng dụng giải trí tương tác với vòng quay ngẫu nhiên công bằng.">
+  <title>🎯 Vòng Quay May Mắn</title>
+  <style>
+    /* ============================================
+       RESET & BIẾN TOÀN CỤC
+       ============================================ */
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
+
+    :root {
+      /* Nền & bề mặt */
+      --bg-body: #0d6e6e;
+      --bg-surface: rgba(255,255,255,0.045);
+      --bg-input: rgba(0,0,0,0.35);
+      --border-subtle: rgba(255,255,255,0.09);
+
+      /* Chữ */
+      --text-1: #eeeef5;
+      --text-2: #8e8ea8;
+
+      /* Accent */
+      --accent: #7c6af6;
+      --accent-light: #a89afe;
+      --accent-glow: rgba(124,106,246,0.45);
+      --teal: #00d2c6;
+      --gold: #ffd556;
+      --rose: #f75590;
+
+      /* Bo góc */
+      --r-lg: 22px;
+      --r-md: 14px;
+      --r-sm: 8px;
+    }
+
+    /* ============================================
+       FONT — hệ thống, không phụ thuộc CDN
+       ============================================ */
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-body);
+      color: var(--text-1);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ============================================
+       NỀN HIỆU ỨNG GRADIENT ĐỘNG
+       ============================================ */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 18% 45%, rgba(124,106,246,0.13) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 82% 25%, rgba(0,210,198,0.09) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 50% at 55% 85%, rgba(247,85,144,0.07) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: bgPulse 16s ease-in-out infinite alternate;
+    }
+    @keyframes bgPulse {
+      0%   { opacity: 1; }
+      100% { opacity: .65; }
+    }
+
+    /* ============================================
+       LAYOUT CHÍNH
+       ============================================ */
+    .app {
+      position: relative; z-index: 1;
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 40px;
+    }
+
+    /* ===== HEADER ===== */
+    .header { text-align: center; animation: fadeDown .7s ease-out; }
+
+    .header h1 {
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--accent-light), var(--accent), var(--teal));
+      background-size: 200% 200%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shiftGrad 5s ease infinite;
+    }
+    .header p {
+      margin-top: 6px;
+      color: var(--text-2);
+      font-size: .95rem;
+    }
+
+    @keyframes shiftGrad {
+      0%,100% { background-position: 0% 50%; }
+      50%     { background-position: 100% 50%; }
+    }
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== VÙNG NỘI DUNG: WHEEL + PANEL ===== */
+    .content {
+      display: flex; gap: 40px;
+      align-items: flex-start; justify-content: center;
+      flex-wrap: wrap;
+      width: 100%;
+      animation: fadeUp .7s ease-out .12s both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================
+       PHẦN VÒNG QUAY
+       ============================================ */
+    .wheel-col {
+      display: flex; flex-direction: column; align-items: center; gap: 28px;
+    }
+
+    /* Khung bọc vòng quay — viền phát sáng */
+    .wheel-frame {
+      position: relative;
+      width: 400px; height: 400px;
+      /* Glow lan toả */
+      filter: drop-shadow(0 0 36px var(--accent-glow));
+    }
+
+    /* Vòng sáng cầu vồng bên ngoài */
+    .wheel-frame::before {
+      content: '';
+      position: absolute; inset: -7px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        var(--accent), var(--teal), var(--gold), var(--rose), var(--accent)
+      );
+      animation: haloSpin 10s linear infinite;
+      opacity: .45;
+      z-index: 0;
+    }
+    /* Lớp nền che, tạo viền mỏng */
+    .wheel-frame::after {
+      content: '';
+      position: absolute; inset: -3px;
+      border-radius: 50%;
+      background: var(--bg-body);
+      z-index: 1;
+    }
+    @keyframes haloSpin { to { transform: rotate(360deg); } }
+
+    /* Canvas vòng quay */
+    #wheelCanvas {
+      position: relative; z-index: 2;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: filter .25s;
+    }
+    #wheelCanvas:hover { filter: brightness(1.06); }
+
+    /* Kim chỉ (pointer) — tam giác trên đỉnh */
+    .pointer {
+      position: absolute;
+      top: -16px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      width: 0; height: 0;
+      border-left: 16px solid transparent;
+      border-right: 16px solid transparent;
+      border-top: 38px solid var(--gold);
+      filter: drop-shadow(0 3px 10px rgba(255,213,86,.55));
+    }
+    .pointer.tick {
+      animation: ptrTick .2s ease;
+    }
+    @keyframes ptrTick {
+      0%,100% { transform: translateX(-50%) translateY(0); }
+      50%     { transform: translateX(-50%) translateY(5px); }
+    }
+
+    /* Tâm vòng quay */
+    .hub {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      z-index: 5;
+      width: 58px; height: 58px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fff, #d4d4d4 60%, #999);
+      box-shadow: 0 4px 18px rgba(0,0,0,.5), inset 0 2px 4px rgba(255,255,255,.8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      pointer-events: none;
+    }
+
+    /* ===== NÚT QUAY ===== */
+    .spin-btn {
+      padding: 15px 54px;
+      font-size: 1.1rem; font-weight: 700; font-family: inherit;
+      color: #fff; border: none; border-radius: 60px;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      box-shadow: 0 6px 28px var(--accent-glow),
+                  inset 0 1px 0 rgba(255,255,255,.2);
+      text-transform: uppercase; letter-spacing: 2px;
+      transition: all .3s ease;
+      position: relative; overflow: hidden;
+    }
+    .spin-btn::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: inherit;
+      background: linear-gradient(135deg, rgba(255,255,255,.14), transparent);
+      opacity: 0; transition: opacity .3s;
+    }
+    .spin-btn:hover:not(:disabled) {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 10px 40px rgba(124,106,246,.55);
+    }
+    .spin-btn:hover:not(:disabled)::after { opacity: 1; }
+    .spin-btn:active:not(:disabled) { transform: translateY(0) scale(.97); }
+    .spin-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ============================================
+       PANEL TUỲ CHỈNH
+       ============================================ */
+    .panel {
+      background: var(--bg-surface);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-lg);
+      padding: 26px 24px;
+      width: 330px;
+      display: flex; flex-direction: column; gap: 16px;
+      animation: fadeUp .7s ease-out .28s both;
+    }
+    .panel-title {
+      font-size: 1.15rem; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-desc {
+      font-size: .84rem; color: var(--text-2); line-height: 1.55;
+    }
+
+    /* Textarea */
+    .panel textarea {
+      width: 100%; min-height: 175px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-md);
+      padding: 13px 15px;
+      font-family: inherit; font-size: .92rem;
+      color: var(--text-1); resize: vertical;
+      line-height: 1.75;
+      transition: border-color .3s, box-shadow .3s;
+    }
+    .panel textarea:focus {
+      outline: none;
+      border-color: var(--accent-light);
+      box-shadow: 0 0 0 3px rgba(168,154,254,.15);
+    }
+    .panel textarea::placeholder { color: var(--text-2); opacity: .55; }
+
+    /* Badge đếm mục */
+    .count-row {
+      font-size: .8rem; color: var(--accent-light); font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(124,106,246,.18);
+      border: 1px solid rgba(124,106,246,.3);
+      border-radius: 20px;
+      padding: 2px 11px; font-weight: 700; min-width: 28px;
+    }
+
+    /* Nút cập nhật */
+    .update-btn {
+      padding: 12px 22px;
+      font-size: .93rem; font-weight: 600; font-family: inherit;
+      color: #fff; border: none; border-radius: var(--r-sm);
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--teal), #00b894);
+      box-shadow: 0 4px 16px rgba(0,210,198,.25);
+      transition: all .3s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .update-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 22px rgba(0,210,198,.4);
+    }
+    .update-btn:active { transform: translateY(0); }
+
+    /* ============================================
+       LỊCH SỬ KẾT QUẢ
+       ============================================ */
+    .history {
+      width: 100%; max-width: 740px;
+      animation: fadeUp .7s ease-out .4s both;
+    }
+    .history-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .history-head h3 {
+      font-size: 1.02rem; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .clear-btn {
+      padding: 5px 13px; font-size: .76rem; font-weight: 600; font-family: inherit;
+      color: var(--rose);
+      background: rgba(247,85,144,.1);
+      border: 1px solid rgba(247,85,144,.2);
+      border-radius: var(--r-sm); cursor: pointer;
+      transition: background .2s;
+    }
+    .clear-btn:hover { background: rgba(247,85,144,.2); }
+
+    .history-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .h-chip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 28px;
+      padding: 5px 15px;
+      font-size: .82rem; font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+      animation: popIn .3s ease-out;
+    }
+    .h-chip .idx { color: var(--accent-light); font-weight: 700; font-size: .74rem; }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(.65); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .history-empty { color: var(--text-2); font-size: .84rem; font-style: italic; }
+
+    /* ============================================
+       POPUP KẾT QUẢ
+       ============================================ */
+    .overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(7px);
+      opacity: 0; pointer-events: none;
+      transition: opacity .35s ease;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    .popup {
+      background: linear-gradient(150deg, rgba(28,28,58,.96), rgba(12,12,30,.98));
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: var(--r-lg);
+      padding: 46px 50px; text-align: center;
+      transform: scale(.65) translateY(25px);
+      transition: transform .45s cubic-bezier(.34,1.56,.64,1);
+      box-shadow: 0 28px 72px rgba(0,0,0,.55), 0 0 54px var(--accent-glow);
+      max-width: 420px; width: 90%;
+    }
+    .overlay.open .popup { transform: scale(1) translateY(0); }
+
+    .popup-emoji {
+      font-size: 3.8rem; margin-bottom: 10px;
+      animation: floatEmoji .7s ease infinite alternate;
+    }
+    @keyframes floatEmoji {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-9px); }
+    }
+
+    .popup-label {
+      font-size: .85rem; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 3px; font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .popup-value {
+      font-size: 2rem; font-weight: 900; line-height: 1.35;
+      margin-bottom: 26px;
+      background: linear-gradient(135deg, var(--gold), #ffaa00);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .popup-close {
+      padding: 11px 38px; font-size: .92rem; font-weight: 600; font-family: inherit;
+      color: var(--text-1);
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 36px; cursor: pointer;
+      transition: background .25s, transform .2s;
+    }
+    .popup-close:hover {
+      background: rgba(255,255,255,.14);
+      transform: translateY(-1px);
+    }
+
+    /* ============================================
+       CONFETTI CANVAS (phủ toàn trang)
+       ============================================ */
+    #confetti {
+      position: fixed; inset: 0;
+      z-index: 999; pointer-events: none;
+    }
+
+    /* ============================================
+       TOAST THÔNG BÁO
+       ============================================ */
+    .toast-msg {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(70px);
+      background: rgba(22,22,44,.94);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-md);
+      padding: 11px 22px; font-size: .88rem; font-weight: 500;
+      color: var(--text-1); z-index: 2000;
+      opacity: 0; pointer-events: none;
+      backdrop-filter: blur(10px);
+      transition: all .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    .toast-msg.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 820px) {
+      .content { flex-direction: column; align-items: center; }
+      .panel { width: 100%; max-width: 420px; }
+      .wheel-frame { width: 340px; height: 340px; }
+    }
+    @media (max-width: 400px) {
+      .wheel-frame { width: 280px; height: 280px; }
+      .header h1 { font-size: 1.6rem; }
+      .popup { padding: 30px 22px; }
+      .popup-value { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Canvas hiệu ứng confetti -->
+  <canvas id="confetti"></canvas>
+
+  <!-- Overlay popup kết quả -->
+  <div class="overlay" id="overlay">
+    <div class="popup">
+      <div class="popup-emoji">🎉</div>
+      <div class="popup-label">Kết quả</div>
+      <div class="popup-value" id="popupValue">—</div>
+      <button class="popup-close" id="popupClose">Đóng</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-msg" id="toastEl"></div>
+
+  <!-- === ỨNG DỤNG CHÍNH === -->
+  <div class="app">
+
+    <!-- Tiêu đề -->
+    <header class="header">
+      <h1>🎯 Vòng Quay May Mắn</h1>
+      <p>Nhấn quay và để vận may quyết định!</p>
+    </header>
+
+    <!-- Nội dung: vòng quay + bảng tuỳ chỉnh -->
+    <div class="content">
+
+      <!-- CỘT TRÁI: Vòng quay -->
+      <section class="wheel-col">
+        <div class="wheel-frame" id="wheelFrame">
+          <div class="pointer" id="ptrEl"></div>
+          <canvas id="wheelCanvas" width="400" height="400"></canvas>
+          <div class="hub">🎯</div>
+        </div>
+        <button class="spin-btn" id="spinBtn">🚀 Quay</button>
+      </section>
+
+      <!-- CỘT PHẢI: Bảng tuỳ chỉnh -->
+      <aside class="panel">
+        <div class="panel-title"><span>⚙️</span> Tuỳ chỉnh vòng quay</div>
+        <p class="panel-desc">
+          Nhập mỗi lựa chọn trên một dòng riêng biệt.<br>Nhấn <strong>Cập nhật</strong> để áp dụng.
+        </p>
+        <textarea id="optArea" placeholder="Nhập các lựa chọn, mỗi dòng một mục…"></textarea>
+        <div class="count-row">Số mục: <span class="badge" id="cntBadge">6</span></div>
+        <button class="update-btn" id="updBtn">✨ Cập nhật vòng quay</button>
+      </aside>
+    </div>
+
+    <!-- Lịch sử -->
+    <section class="history" id="histSec">
+      <div class="history-head">
+        <h3>📜 Lịch sử kết quả</h3>
+        <button class="clear-btn" id="clearBtn">Xoá lịch sử</button>
+      </div>
+      <div class="history-list" id="histList">
+        <span class="history-empty">Chưa có kết quả nào.</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================================
+       JAVASCRIPT — TOÀN BỘ LOGIC
+       ============================================ -->
+  <script>
+  (function () {
+    'use strict';
+
+    // ─── DANH SÁCH MẶC ĐỊNH ──────────────────────
+    const DEFAULTS = ['Câu cá', 'Đập đá', 'Tiệc trò chơi', 'Bắt bọ+thẻ', 'Leo tháp', 'Đào rương'];
+
+    // Bảng màu đẹp cho các ô (tối đa 16, lặp lại nếu nhiều hơn)
+    const PALETTE = [
+      '#6c5ce7','#00cec9','#fd79a8','#ffc048',
+      '#00b894','#e17055','#0984e3','#d63031',
+      '#e84393','#636e72','#55efc4','#a29bfe',
+      '#74b9ff','#fab1a0','#fdcb6e','#81ecec'
+    ];
+
+    // ─── TRẠNG THÁI ──────────────────────────────
+    let items    = [...DEFAULTS];  // Danh sách hiện tại
+    let spinning = false;          // Đang quay?
+    let angle    = 0;              // Góc quay hiện tại (radian)
+    let history  = [];             // Kết quả đã quay
+
+    // ─── THAM CHIẾU DOM ──────────────────────────
+    const cvs        = document.getElementById('wheelCanvas');
+    const ctx        = cvs.getContext('2d');
+    const spinBtn    = document.getElementById('spinBtn');
+    const optArea    = document.getElementById('optArea');
+    const updBtn     = document.getElementById('updBtn');
+    const cntBadge   = document.getElementById('cntBadge');
+    const overlay    = document.getElementById('overlay');
+    const popupValue = document.getElementById('popupValue');
+    const popupClose = document.getElementById('popupClose');
+    const histList   = document.getElementById('histList');
+    const clearBtn   = document.getElementById('clearBtn');
+    const ptrEl      = document.getElementById('ptrEl');
+    const toastEl    = document.getElementById('toastEl');
+    const confCvs    = document.getElementById('confetti');
+    const confCtx    = confCvs.getContext('2d');
+
+    // ═══════════════════════════════════════════════
+    // VẼ VÒNG QUAY
+    // ═══════════════════════════════════════════════
+
+    /** Vẽ lại toàn bộ vòng quay dựa trên `items` và `angle` hiện tại */
+    function draw() {
+      const W = cvs.width, H = cvs.height;
+      const cx = W / 2, cy = H / 2, R = cx - 4;
+      const n = items.length;
+      const arc = (2 * Math.PI) / n;
+
+      ctx.clearRect(0, 0, W, H);
+
+      for (let i = 0; i < n; i++) {
+        const a0 = angle + i * arc;
+        const a1 = a0 + arc;
+
+        // Phần ô màu
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, R, a0, a1);
+        ctx.closePath();
+        ctx.fillStyle = PALETTE[i % PALETTE.length];
+        ctx.fill();
+
+        // Viền mỏng
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255,255,255,.13)';
+        ctx.stroke();
+
+        // Nhãn chữ
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(a0 + arc / 2);
+
+        // Kích thước chữ tự co theo số mục
+        const fsize = Math.max(10, Math.min(15, 170 / n));
+        ctx.font = `bold ${fsize}px 'Segoe UI', system-ui, sans-serif`;
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,.55)';
+        ctx.shadowBlur = 4;
+
+        // Cắt label nếu quá dài
+        const lbl = items[i].length > 14 ? items[i].slice(0, 13) + '…' : items[i];
+        ctx.fillText(lbl, R * 0.6, 0);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
+      // Viền ngoài cùng
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,.18)';
+      ctx.stroke();
+
+      // Vẽ các chấm trang trí trên viền (giống đèn LED)
+      const dotCount = Math.max(n * 4, 24);
+      for (let d = 0; d < dotCount; d++) {
+        const da = (2 * Math.PI / dotCount) * d + angle * 0.3;
+        const dx = cx + Math.cos(da) * (R + 1);
+        const dy = cy + Math.sin(da) * (R + 1);
+        ctx.beginPath();
+        ctx.arc(dx, dy, 2.2, 0, 2 * Math.PI);
+        ctx.fillStyle = d % 2 === 0 ? 'rgba(255,213,86,.6)' : 'rgba(255,255,255,.25)';
+        ctx.fill();
+      }
+    }
+
+    // ═══════════════════════════════════════════════
+    // LOGIC QUAY (Spin)
+    // ═══════════════════════════════════════════════
+
+    /**
+     * Bắt đầu quay vòng quay.
+     * - Chọn ngẫu nhiên tổng góc quay (5–10 vòng + offset ngẫu nhiên)
+     * - Dùng ease-out (cubic) để gia tốc → chậm dần
+     */
+    function spin() {
+      if (spinning || items.length < 2) return;
+      spinning = true;
+      spinBtn.disabled = true;
+
+      // Tổng góc: 5–10 vòng đầy + offset ngẫu nhiên trong [0, 2π)
+      const spins       = 5 + Math.random() * 5;
+      const randOffset  = Math.random() * 2 * Math.PI;
+      const totalRot    = spins * 2 * Math.PI + randOffset;
+
+      const startAngle  = angle;
+      const endAngle    = startAngle + totalRot;
+      const duration    = 4200 + Math.random() * 1400; // 4.2–5.6 giây
+      const t0          = performance.now();
+
+      // Lưu slice trước đó để nhận biết vượt biên → tick pointer
+      let prevSlice = -1;
+
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+      function frame(now) {
+        const elapsed  = now - t0;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased    = easeOutCubic(progress);
+
+        angle = startAngle + totalRot * eased;
+        draw();
+
+        // Phát hiện vượt biên ô → hiệu ứng tick trên pointer
+        const arc = (2 * Math.PI) / items.length;
+        const normA = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        const curSlice = Math.floor(normA / arc);
+        if (prevSlice !== -1 && curSlice !== prevSlice) {
+          ptrEl.classList.remove('tick');
+          void ptrEl.offsetWidth;           // buộc reflow → chạy lại animation
+          ptrEl.classList.add('tick');
+        }
+        prevSlice = curSlice;
+
+        if (progress < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          // Quay xong — chuẩn hoá góc
+          angle = endAngle % (2 * Math.PI);
+          draw();
+          onSpinEnd();
+        }
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    /** Xác định kết quả khi vòng quay dừng */
+    function onSpinEnd() {
+      const n   = items.length;
+      const arc = (2 * Math.PI) / n;
+
+      /*
+       * Kim chỉ ở vị trí "12 giờ" = góc −π/2 (hoặc 3π/2) trên hệ toạ độ Canvas.
+       * Mỗi ô i bắt đầu từ angle + i*arc.
+       * Ta tính góc "ngược" từ vị trí kim đến gốc quay.
+       */
+      const pointerRad = (2 * Math.PI - ((angle + Math.PI / 2) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const idx = Math.floor(pointerRad / arc) % n;
+      const winner = items[idx];
+
+      // Lưu lịch sử
+      history.unshift(winner);
+      renderHistory();
+
+      // Hiện popup
+      showPopup(winner);
+
+      // Bắn confetti
+      fireConfetti();
+
+      spinning = false;
+      spinBtn.disabled = false;
+    }
+
+    // ═══════════════════════════════════════════════
+    // POPUP KẾT QUẢ
+    // ═══════════════════════════════════════════════
+
+    function showPopup(text) {
+      popupValue.textContent = text;
+      overlay.classList.add('open');
+    }
+    function hidePopup() { overlay.classList.remove('open'); }
+
+    popupClose.addEventListener('click', hidePopup);
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) hidePopup();
+    });
+
+    // ═══════════════════════════════════════════════
+    // CẬP NHẬT DANH SÁCH TỪ TEXTAREA
+    // ═══════════════════════════════════════════════
+
+    /** Ghi danh sách hiện tại vào textarea */
+    function syncArea() {
+      optArea.value = items.join('\n');
+      cntBadge.textContent = items.length;
+    }
+
+    /** Đọc textarea → cập nhật vòng quay */
+    function applyUpdate() {
+      const raw = optArea.value.trim();
+      if (!raw) { toast('⚠️ Vui lòng nhập ít nhất 2 lựa chọn!'); return; }
+
+      const next = raw.split('\n').map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
+      if (next.length < 2) { toast('⚠️ Cần ít nhất 2 lựa chọn.'); return; }
+
+      items = next;
+      cntBadge.textContent = items.length;
+      angle = 0;
+      draw();
+      toast('✅ Đã cập nhật vòng quay (' + items.length + ' mục)!');
+    }
+
+    // Đếm realtime khi gõ
+    optArea.addEventListener('input', function () {
+      var c = optArea.value.split('\n').map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; }).length;
+      cntBadge.textContent = c;
+    });
+
+    updBtn.addEventListener('click', applyUpdate);
+
+    // ═══════════════════════════════════════════════
+    // LỊCH SỬ KẾT QUẢ
+    // ═══════════════════════════════════════════════
+
+    function renderHistory() {
+      if (history.length === 0) {
+        histList.innerHTML = '<span class="history-empty">Chưa có kết quả nào.</span>';
+        return;
+      }
+      histList.innerHTML = history.map(function (v, i) {
+        return '<div class="h-chip"><span class="idx">#' + (i + 1) + '</span> ' + esc(v) + '</div>';
+      }).join('');
+    }
+
+    clearBtn.addEventListener('click', function () {
+      history = [];
+      renderHistory();
+      toast('🗑️ Đã xoá lịch sử.');
+    });
+
+    // ═══════════════════════════════════════════════
+    // TOAST
+    // ═══════════════════════════════════════════════
+
+    var toastTimer = null;
+    function toast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('visible');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toastEl.classList.remove('visible'); }, 2400);
+    }
+
+    // ═══════════════════════════════════════════════
+    // CONFETTI 🎊
+    // ═══════════════════════════════════════════════
+
+    var confParts = [];
+    var confRaf   = null;
+
+    function sizeConfetti() {
+      confCvs.width  = window.innerWidth;
+      confCvs.height = window.innerHeight;
+    }
+
+    function fireConfetti() {
+      sizeConfetti();
+      confParts = [];
+      for (var i = 0; i < 130; i++) {
+        confParts.push({
+          x: Math.random() * confCvs.width,
+          y: -Math.random() * confCvs.height,
+          w: 5 + Math.random() * 7,
+          h: 3 + Math.random() * 5,
+          c: PALETTE[Math.floor(Math.random() * PALETTE.length)],
+          vx: (Math.random() - .5) * 4.5,
+          vy: 2 + Math.random() * 4.5,
+          r: Math.random() * 360,
+          rs: (Math.random() - .5) * 12,
+          o: 1
+        });
+      }
+      if (confRaf) cancelAnimationFrame(confRaf);
+      tickConf();
+    }
+
+    function tickConf() {
+      confCtx.clearRect(0, 0, confCvs.width, confCvs.height);
+      var alive = false;
+      for (var i = 0; i < confParts.length; i++) {
+        var p = confParts[i];
+        if (p.o <= 0) continue;
+        alive = true;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += .065;
+        p.r += p.rs;
+        if (p.y > confCvs.height * .72) p.o -= .016;
+
+        confCtx.save();
+        confCtx.translate(p.x, p.y);
+        confCtx.rotate(p.r * Math.PI / 180);
+        confCtx.globalAlpha = Math.max(0, p.o);
+        confCtx.fillStyle = p.c;
+        confCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        confCtx.restore();
+      }
+      if (alive) confRaf = requestAnimationFrame(tickConf);
+      else confCtx.clearRect(0, 0, confCvs.width, confCvs.height);
+    }
+
+    // ═══════════════════════════════════════════════
+    // TIỆN ÍCH
+    // ═══════════════════════════════════════════════
+
+    /** Escape HTML để tránh XSS */
+    function esc(s) {
+      var d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // ═══════════════════════════════════════════════
+    // RESPONSIVE: Co Canvas theo khung
+    // ═══════════════════════════════════════════════
+
+    function fitCanvas() {
+      var frame = document.getElementById('wheelFrame');
+      var sz = frame.clientWidth;
+      cvs.width  = sz;
+      cvs.height = sz;
+      draw();
+    }
+
+    window.addEventListener('resize', function () {
+      fitCanvas();
+      sizeConfetti();
+    });
+
+    // ═══════════════════════════════════════════════
+    // SỰ KIỆN
+    // ═══════════════════════════════════════════════
+
+    spinBtn.addEventListener('click', spin);
+    cvs.addEventListener('click', spin);          // Click trực tiếp vào bánh xe cũng quay
+
+    // ═══════════════════════════════════════════════
+    // KHỞI TẠO
+    // ═══════════════════════════════════════════════
+
+    syncArea();
+    fitCanvas();
+  })();
+  </script>
+</body>
+</html>
